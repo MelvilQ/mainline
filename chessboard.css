@@ -2,6 +2,7 @@ body {
   background: #161512 linear-gradient(to bottom, #2e2a24, #161512 116px) no-repeat;
   color: #bababa;
   overflow-x: hidden;
+  font-family: "Lato", sans-serif;
 }
 #app {
   display: flex;
@@ -149,6 +150,9 @@ body {
 }
 
 @media(max-width: 600px) {
+  #info {
+    font-size: 12pt;
+  }
   .cg-board-wrap {
     width: 95vmin;
     height: 95vmin;
