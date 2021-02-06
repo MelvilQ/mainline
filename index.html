@@ -53,28 +53,43 @@ const openingChessboard = {
       if (database === 'lichess') {
         queryOptions.variant = 'standard';
       }
-      const response = await axios.get('https://explorer.lichess.ovh/' + database, {params: {fen: this.game.fen(), moves: 20, ...queryOptions}});
-      console.log(response.data);
-      this.openingInfo = response.data;
+      const response = await axios.get('https://explorer.lichess.ovh/' + database, 
+        {params: {fen: this.game.fen(), moves: 20, ...queryOptions}});
+      const openingInfo = response.data;
+      const sum = openingInfo.white + openingInfo.black + openingInfo.draws;
+      openingInfo.moves.forEach(m => m.text = m.san.replace('Q','D').replace('R','T').replace('B','L').replace('N','S'));
+      openingInfo.moves.forEach(m => m.probability = (sum >= 10) ? ((m.white + m.black + m.draws) / sum) : 0);
+      openingInfo.moves.forEach(m => m.isLosing = 
+        (m.white + m.black + m.draws > 0) 
+          && ((this.game.turn() === 'w' ? m.black : m.white) / (m.white + m.black + m.draws)) > 0.5);
+      openingInfo.moves.forEach((m, i) => m.strength = 
+        ((m.isLosing || m.probability < 0.03) ? 0 // bad
+          : (i === 0 || m.probability > 0.3) ? 3  // top
+          : (m.probability < 0.15) ? 1            // playable
+          : 2));                                  // good
+      this.openingInfo = openingInfo;
+      console.log(openingInfo.moves.map(m => [m.text, m.probability, m.isLosing, m.strength]));
       const categorization = this.openingInfo.opening;
       if (!!categorization) {
         this.$emit('opening', `${categorization.eco} - ${categorization.name}`);
       }      
     },
-    getMoveProbability(move) {
-      const sum = this.openingInfo.white + this.openingInfo.black + this.openingInfo.draws;
-      const moveInfo = this.openingInfo.moves.find(m => m.uci === move);
-      return !moveInfo ? 0 : ((moveInfo.white + moveInfo.black + moveInfo.draws) / sum);
-    },
     onMoveInput(from, to) {
       this.move(from + to);
+      // TODO: Fehler bei Rochade abfangen
     },
     move(move) {
       console.log(move);
       this.game.move(move, {sloppy: true});
-      const popularity = this.getMoveProbability(move);
-      console.log(popularity);
-      this.prepareOpponentMove();
+      const playedMove = this.openingInfo.moves.find(m => m.uci === move);
+      if (!playedMove || !playedMove.strength) {
+        this.game.undo();
+        this.board.set({fen: this.game.fen()});
+        this.preparePlayerMove();
+      } else {
+        console.log(`${playedMove.text}: ${playedMove.strength} (${Math.round(playedMove.probability*100)}%)`);
+        this.prepareOpponentMove();
+      }
     },
     async prepareOpponentMove() {
       this.board.set({
@@ -90,9 +105,7 @@ const openingChessboard = {
     async performOpponentMove() {
       const opponentMove = this.getMoveForOpponent('realistic');
       this.game.move(opponentMove, {sloppy: true});
-      this.board.set({
-        fen: this.game.fen(),
-      });
+      this.board.set({fen: this.game.fen()});
       this.preparePlayerMove();
     },
     getMoveForOpponent(mode) {
@@ -105,8 +118,7 @@ const openingChessboard = {
         let countdown = Math.random();
         for (let i = 0; i < moves.length; ++i) {
           const move = moves[i];
-          const probability = this.getMoveProbability(move)
-          countdown -= probability;
+          countdown -= move.probability;
           if (countdown <= 0) {
             return move;
           }
@@ -117,9 +129,7 @@ const openingChessboard = {
     undo() {
       this.game.undo();
       this.game.undo();
-      this.board.set({
-        fen: this.game.fen(),
-      });
+      this.board.set({fen: this.game.fen()});
       this.preparePlayerMove();
     }
   },

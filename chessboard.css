@@ -150,12 +150,17 @@ body {
 }
 
 @media(max-width: 600px) {
+  body {
+    margin: 0;
+    margin-top: 1vh;
+  }
   #info {
     font-size: 12pt;
   }
   .cg-board-wrap {
     width: 95vmin;
     height: 95vmin;
+    margin-right: 1vh;
   }
   .cg-board-wrap coords {
     font-size: 3vmin;
