@@ -12,11 +12,19 @@
   <body>
 
     <div id="app">
-      <opening-chessboard :fen="position" :orientation="playerColor" :event="event" @opening="refreshOpeningName"></opening-chessboard>
+      <opening-chessboard :fen="position" :orientation="playerColor" 
+        :event="event" 
+        @opening="refreshOpeningName"
+        @move="addMoveToList"
+        @mistake="onWrongMove">
+      </opening-chessboard>
       <div class="button-line">
         <button @click="emit('undo')">&lt;&lt;</button>
       </div>
       <div id="info">{{openingName}}</div>
+      <div>
+        <div v-for="move in moves">{{move.text}} {{move.strength}} {{move.probability}}</div>
+      </div>
     </div>
 
     <script>
@@ -85,9 +93,11 @@ const openingChessboard = {
       if (!playedMove || !playedMove.strength) {
         this.game.undo();
         this.board.set({fen: this.game.fen()});
+        this.$emit('mistake', playedMove);
         this.preparePlayerMove();
       } else {
         console.log(`${playedMove.text}: ${playedMove.strength} (${Math.round(playedMove.probability*100)}%)`);
+        this.$emit('move', playedMove);
         this.prepareOpponentMove();
       }
     },
@@ -151,6 +161,8 @@ const app = new Vue({
     openingName: '',
     playerColor: 'black',
     event: null,
+    moves: [],
+    lifes: 3,
   },
   methods: {
     emit(event) {
@@ -158,6 +170,12 @@ const app = new Vue({
     },
     refreshOpeningName(name) {
       this.openingName = name;
+    },
+    addMoveToList(move) {
+      this.moves.push(move);
+    },
+    onWrongMove(move) {
+      this.lifes -= 1;
     }
   },
   created() {
