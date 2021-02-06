@@ -12,11 +12,11 @@
   <body>
 
     <div id="app">
-      <opening-chessboard :fen="position" :event="event" @opening="refreshOpeningName"></opening-chessboard>
+      <opening-chessboard :fen="position" :orientation="playerColor" :event="event" @opening="refreshOpeningName"></opening-chessboard>
       <div class="button-line">
         <button @click="emit('undo')">&lt;&lt;</button>
       </div>
-      <div id="info">{{opening}}</div>
+      <div id="info">{{openingName}}</div>
     </div>
 
     <script>
@@ -31,11 +31,12 @@ const openingChessboard = {
     }
   },
   methods: {
-    startGame() {
-      this.startPosition();
-    },
-    async startPosition() {
-      await this.preparePlayerMove();
+    startPosition() {
+      if (this.orientation.startsWith(this.game.turn())) {
+        this.preparePlayerMove();
+      } else {
+        this.prepareOpponentMove();
+      }
     },
     async preparePlayerMove() {
       await this.getOpeningInfo();
@@ -73,9 +74,9 @@ const openingChessboard = {
       this.game.move(move, {sloppy: true});
       const popularity = this.getMoveProbability(move);
       console.log(popularity);
-      this.performOpponentMove();
+      this.prepareOpponentMove();
     },
-    async performOpponentMove() {
+    async prepareOpponentMove() {
       this.board.set({
         turnColor: this.toColor(),
       })
@@ -84,6 +85,9 @@ const openingChessboard = {
         console.log('Keine Züge mehr da...');
         return;
       }
+      setTimeout(this.performOpponentMove, 500);
+    },
+    async performOpponentMove() {
       const opponentMove = this.getMoveForOpponent('realistic');
       this.game.move(opponentMove, {sloppy: true});
       this.board.set({
@@ -123,7 +127,7 @@ const openingChessboard = {
     this.openingInfo = null;
   },
   mounted() {
-    this.startGame();
+    this.startPosition();
   }
 };
 
@@ -134,15 +138,16 @@ const app = new Vue({
   },
   data: {
     position: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-    opening: '',
+    openingName: '',
+    playerColor: 'black',
     event: null,
   },
   methods: {
     emit(event) {
       this.event = {type: event};
     },
-    refreshOpeningName(opening) {
-      this.opening = opening;
+    refreshOpeningName(name) {
+      this.openingName = name;
     }
   },
   created() {
