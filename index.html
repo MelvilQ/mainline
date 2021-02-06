@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>MainLine</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="chessboard.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
+    <script src="vue-chessboard.browser.js"></script>
+    <script src="axios.min.js"></script>
+  </head>
+  <body>
+
+    <div id="app">
+      <opening-chessboard :fen="position" @opening="refreshOpeningName"></opening-chessboard>
+      <div id="info">{{opening}}</div>
+    </div>
+
+    <script>
+const openingChessboard = {
+  extends: VueChessboard.chessboard,
+  methods: {
+    startGame() {
+      this.startPosition();
+    },
+    async startPosition() {
+      await this.preparePlayerMove();
+    },
+    async preparePlayerMove() {
+      await this.getOpeningInfo();
+      this.board.set({
+        turnColor: this.toColor(),
+        movable: {
+          color: this.toColor(),
+          dests: this.possibleMoves(),
+          events: {after: this.onMoveInput}
+        }
+      });
+    },
+    async getOpeningInfo(database = 'master', queryOptions = {}) {
+      if (database === 'lichess') {
+        queryOptions.variant = 'standard';
+      }
+      const response = await axios.get('https://explorer.lichess.ovh/' + database, {params: {fen: this.game.fen(), moves: 20, ...queryOptions}});
+      console.log(response.data);
+      this.openingInfo = response.data;
+      const categorization = this.openingInfo.opening;
+      if (!!categorization) {
+        this.$emit('opening', `${categorization.eco} - ${categorization.name}`);
+      }      
+    },
+    getMoveProbability(move) {
+      const sum = this.openingInfo.white + this.openingInfo.black + this.openingInfo.draws;
+      const moveInfo = this.openingInfo.moves.find(m => m.uci === move);
+      return !moveInfo ? 0 : ((moveInfo.white + moveInfo.black + moveInfo.draws) / sum);
+    },
+    onMoveInput(from, to) {
+      this.move(from + to);
+    },
+    move(move) {
+      console.log(move);
+      this.game.move(move, {sloppy: true});
+      const popularity = this.getMoveProbability(move);
+      console.log(popularity);
+      this.performOpponentMove();
+    },
+    async performOpponentMove() {
+      this.board.set({
+        turnColor: this.toColor(),
+      })
+      await this.getOpeningInfo('lichess', {ratings: ['1600', '1800'], speeds: ['blitz', 'rapid', 'classical']});
+      if (!this.openingInfo?.moves?.length) {
+        console.log('Keine Züge mehr da...');
+        return;
+      }
+      const opponentMove = this.getMoveForOpponent('realistic');
+      this.game.move(opponentMove, {sloppy: true});
+      this.board.set({
+        fen: this.game.fen(),
+      });
+      this.preparePlayerMove();
+    },
+    getMoveForOpponent(mode) {
+      const moves = this.openingInfo.moves.map(m => m.uci);
+      if (mode === 'main') {
+        return moves[0];
+      } else if (mode === 'equal') {
+        return moves[Math.floor(Math.random() * moves.length)];
+      } else if (mode === 'realistic') {
+        let countdown = Math.random();
+        for (let i = 0; i < moves.length; ++i) {
+          const move = moves[i];
+          const probability = this.getMoveProbability(move)
+          countdown -= probability;
+          if (countdown <= 0) {
+            return move;
+          }
+        }
+      }
+      return moves[0];
+    }
+  },
+  created() {
+    this.openingInfo = null;
+  },
+  mounted() {
+    this.startGame();
+  }
+};
+
+const app = new Vue({
+  el: '#app',
+  components: {
+    'opening-chessboard': openingChessboard,
+  },
+  data: {
+    position: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+    opening: '',
+  },
+  methods: {
+    refreshOpeningName(opening) {
+      this.opening = opening;
+    }
+  },
+  created() {
+    
+  }
+});
+
+    </script>
+  </body>
+</html>
