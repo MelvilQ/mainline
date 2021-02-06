@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>MainLine</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <link rel="stylesheet" href="chessboard.css"/>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:400,500,700">
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
@@ -12,13 +12,24 @@
   <body>
 
     <div id="app">
-      <opening-chessboard :fen="position" @opening="refreshOpeningName"></opening-chessboard>
+      <opening-chessboard :fen="position" :event="event" @opening="refreshOpeningName"></opening-chessboard>
+      <div class="button-line">
+        <button @click="emit('undo')">&lt;&lt;</button>
+      </div>
       <div id="info">{{opening}}</div>
     </div>
 
     <script>
 const openingChessboard = {
   extends: VueChessboard.chessboard,
+  props: ['event'],
+  watch: {
+    event(event) {
+      if (event.type === 'undo') {
+        this.undo();
+      }
+    }
+  },
   methods: {
     startGame() {
       this.startPosition();
@@ -98,6 +109,14 @@ const openingChessboard = {
         }
       }
       return moves[0];
+    },
+    undo() {
+      this.game.undo();
+      this.game.undo();
+      this.board.set({
+        fen: this.game.fen(),
+      });
+      this.preparePlayerMove();
     }
   },
   created() {
@@ -116,8 +135,12 @@ const app = new Vue({
   data: {
     position: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
     opening: '',
+    event: null,
   },
   methods: {
+    emit(event) {
+      this.event = {type: event};
+    },
     refreshOpeningName(opening) {
       this.opening = opening;
     }
