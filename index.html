@@ -14,15 +14,21 @@
     <div id="app">
       <opening-chessboard :fen="position" :orientation="playerColor" 
         :event="event" 
+        @progress="refreshProgress"
         @opening="refreshOpeningName"
         @move="addMoveToList"
-        @mistake="onWrongMove">
+        @mistake="onWrongMove"
+        @middlegame="onMiddlegameReached">
       </opening-chessboard>
       <div class="button-line">
         <button @click="emit('undo')">&lt;&lt;</button>
       </div>
       <div id="info">{{openingName}}</div>
       <div>
+        <div>
+          <span>{{currentPositionPlayed}}</span>
+          <span>{{progress}}</span>
+        </div>
         <div v-for="move in moves">
           <span>{{move.text}}</span>
           <span>{{formatStrength(move.strength)}}</span>
@@ -52,6 +58,11 @@ const openingChessboard = {
     },
     async preparePlayerMove() {
       await this.getOpeningInfo();
+      if (this.openingInfo.played <= 10) {
+        this.board.set({turnColor: null});
+        this.$emit('middlegame');
+        return;
+      }
       this.board.set({
         turnColor: this.toColor(),
         movable: {
@@ -69,11 +80,14 @@ const openingChessboard = {
         {params: {fen: this.game.fen(), moves: 20, ...queryOptions}});
       const openingInfo = response.data;
       const sum = openingInfo.white + openingInfo.black + openingInfo.draws;
+      this.$emit('progress', sum);
+      openingInfo.played = sum;
+      openingInfo.isLosing = sum > 0 && ((this.game.turn() === 'w' ? openingInfo.black : openingInfo.white) / sum) > 0.5;
       openingInfo.moves.forEach(m => m.text = m.san.replace('Q','D').replace('R','T').replace('B','L').replace('N','S'));
-      openingInfo.moves.forEach(m => m.probability = (sum >= 10) ? ((m.white + m.black + m.draws) / sum) : 0);
+      openingInfo.moves.forEach(m => m.played = m.white + m.black + m.draws);
+      openingInfo.moves.forEach(m => m.probability = (sum > 0) ? m.played / sum : 0);
       openingInfo.moves.forEach(m => m.isLosing = 
-        (m.white + m.black + m.draws > 0) 
-          && ((this.game.turn() === 'w' ? m.black : m.white) / (m.white + m.black + m.draws)) > 0.5);
+        m.played > 0 && ((this.game.turn() === 'w' ? m.black : m.white) / m.played) > 0.5);
       openingInfo.moves.forEach((m, i) => m.strength = 
         ((m.isLosing || m.probability < 0.03) ? 0 // bad
           : (i === 0 || m.probability > 0.3) ? 3  // top
@@ -160,6 +174,8 @@ const app = new Vue({
     position: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
     openingName: '',
     playerColor: 'black',
+    currentPositionPlayed: 10000000,
+    progress: 0,
     event: null,
     moves: [],
     lifes: 3,
@@ -167,6 +183,11 @@ const app = new Vue({
   methods: {
     emit(event) {
       this.event = {type: event};
+    },
+    refreshProgress(played) {
+      this.currentPositionPlayed = played;
+      this.progress = (this.currentPositionPlayed <= 10) ? 7 
+        : (8 - Math.log(this.currentPositionPlayed) / Math.log(10));
     },
     refreshOpeningName(name) {
       this.openingName = name;
@@ -176,6 +197,9 @@ const app = new Vue({
     },
     onWrongMove(move) {
       this.lifes -= 1;
+    },
+    onMiddlegameReached() {
+      alert('Mittelspiel erfolgreich erreicht. Glückwunsch!');
     },
     formatStrength(strength){
       switch(strength){
