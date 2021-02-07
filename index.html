@@ -14,7 +14,7 @@
     <div id="app">
       <div id="settings" v-if="showSettings">
         <div>
-          <div><strong>Optionen</strong></div><br>
+          <div><strong>Settings</strong></div><br>
           <select v-model="settings.startPosition" @input="validateFen">
             <option v-for="option in startPositionOptions" :value="option.value">{{option.label}}</option>
           </select>
@@ -40,19 +40,24 @@
       </opening-chessboard>
       <div class="button-line">
         <button @click="emit('undo')">&lt;&lt;</button>
-        <button @click="newGame">Neu</button>
-        <button @click="openSettings">Optionen</button>
+        <button @click="newGame">New</button>
+        <button @click="openSettings">Settings</button>
       </div>
       <div id="info">{{currentOpeningName}}</div>
       <div>
         <div>
-          <span>{{currentPositionPlayed}}</span>
-          <span>{{progress}}</span>
+          <span>#Played: {{currentPositionPlayed}}</span>
+          <span>Progress: {{progress.toFixed(0)}}</span>
+          <span>Lifes: {{lifes}}</span>
         </div>
-        <div v-for="move in moves">
-          <span>{{move.text}}</span>
-          <span>{{formatStrength(move.strength)}}</span>
-          <span>{{formatProbability(move.probability)}}</span>
+        <div id="moves">
+          <div v-for="no in moveNoList" class="move-no" :style="{'grid-row': no}">{{no}}.</div>
+          <div v-if="!!moves[0] && moves[0].moveColor === 'b'" class="move-placeholder" :style="{'grid-row': moves[0].moveNo}">...</div>
+          <div v-for="move in moves" :style="{'grid-column': move.moveColor === 'w' ? 2 : 3, 'grid-row': move.moveNo}">
+            <span>{{move.text}}</span>
+            <span v-if="move.isPlayerMove">{{formatStrength(move.strength)}}</span>
+            <span>{{formatProbability(move.probability)}}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -109,11 +114,16 @@ const openingChessboard = {
       this.$emit('progress', sum);
       openingInfo.played = sum;
       openingInfo.isLosing = sum > 0 && ((this.game.turn() === 'w' ? openingInfo.black : openingInfo.white) / sum) > 0.5;
+      const moveNumber = this.getMoveNumber();
+      openingInfo.moves.forEach(m => m.moveNo = moveNumber);
+      const moveColor = this.game.turn();
+      openingInfo.moves.forEach(m => m.moveColor = moveColor);
+      openingInfo.moves.forEach(m => m.isPlayerMove = m.moveColor === this.orientation);
       openingInfo.moves.forEach(m => m.text = m.san.replace('Q','D').replace('R','T').replace('B','L').replace('N','S'));
       openingInfo.moves.forEach(m => m.played = m.white + m.black + m.draws);
       openingInfo.moves.forEach(m => m.probability = (sum > 0) ? m.played / sum : 0);
       openingInfo.moves.forEach(m => m.isLosing = 
-        m.played > 0 && ((this.game.turn() === 'w' ? m.black : m.white) / m.played) > 0.5);
+        m.played > 0 && ((moveColor === 'w' ? m.black : m.white) / m.played) > 0.5);
       openingInfo.moves.forEach((m, i) => m.strength = 
         ((m.isLosing || m.probability < 0.03) ? 0 // bad
           : (i === 0 || m.probability > 0.3) ? 3  // top
@@ -156,7 +166,8 @@ const openingChessboard = {
     },
     async performOpponentMove() {
       const opponentMove = this.getMoveForOpponent('realistic');
-      const movePerformed = this.game.move(opponentMove);
+      const movePerformed = this.game.move(opponentMove.san);
+      this.$emit('move', opponentMove);
       this.setLastMoveHighlightColor((opponentMove.strength < 2) ? 'yellow' : 'default');
       this.board.move(movePerformed.from, movePerformed.to);
       this.preparePlayerMove();
@@ -164,20 +175,20 @@ const openingChessboard = {
     getMoveForOpponent(mode) {
       const moves = this.openingInfo.moves;
       if (mode === 'main') {
-        return moves[0].san;
+        return moves[0];
       } else if (mode === 'equal') {
-        return moves[Math.floor(Math.random() * moves.length)].san;
+        return moves[Math.floor(Math.random() * moves.length)];
       } else if (mode === 'realistic') {
         let countdown = Math.random();
         for (let i = 0; i < moves.length; ++i) {
           const move = moves[i];
           countdown -= move.probability;
           if (countdown <= 0) {
-            return move.san;
+            return move;
           }
         }
       }
-      return moves[0].san;
+      return moves[0];
     },
     undo() {
       this.game.undo();
@@ -188,6 +199,9 @@ const openingChessboard = {
     setLastMoveHighlightColor(color) {
       document.getElementById('app').className = color === 'default' ? '' : 'last-move-' + color;
     },
+    getMoveNumber() {
+      return parseInt(this.game.fen().split(' ')[5]);
+    }
   },
   created() {
     this.openingInfo = null;
@@ -217,11 +231,13 @@ const app = new Vue({
     },
     showSettings: false,
     startPositionOptions: [
-      {label: 'Default', value: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'},
+      {label: 'Start', value: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'},
+      {label: 'Sicilian', value: 'rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2'},
       {label: 'Najdorf', value: 'rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6'},
       {label: 'Dragon', value: 'rnbqkb1r/pp2pp1p/3p1np1/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6'},
       {label: 'Accelerated Dragon', value: 'r1bqkbnr/pp1ppp1p/2n3p1/8/3NP3/8/PPP2PPP/RNBQKB1R w KQkq - 0 5'},
       {label: 'Hyperaccelerated Dragon', value: 'rnbqkbnr/pp1ppp1p/6p1/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3'},
+      {label: 'Rossolimo Attack', value: 'r1bqkbnr/pp1ppppp/2n5/1Bp5/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3'},
     ],
     startPosition: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
     playerColor: 'white',
@@ -231,7 +247,13 @@ const app = new Vue({
     progress: 0,
     event: null,
     moves: [],
+    wrongMove: null,
     lifes: 3,
+  },
+  computed: {
+    moveNoList() {
+      return [...new Set(this.moves.map(m => m.moveNo))];
+    }
   },
   methods: {
     newGame() {
@@ -254,12 +276,18 @@ const app = new Vue({
     },
     addMoveToList(move) {
       this.moves.push(move);
+      this.wrongMove = null;
     },
     onWrongMove(move) {
+      this.wrongMove = move;
       this.lifes -= 1;
+      if (this.lifes <= 0) {
+        alert('You lost all your lifes. Start again!');
+        this.newGame();
+      }
     },
     onMiddlegameReached() {
-      alert('Mittelspiel erfolgreich erreicht. Glückwunsch!');
+      setTimeout(() => alert('Congrats, you made it into the middlegame!'), 1000);
     },
     formatStrength(strength){
       switch(strength){
