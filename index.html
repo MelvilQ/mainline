@@ -27,12 +27,16 @@
           <div style="text-align: right"><button class="ok" @click="applySettings">OK</button></div>
         </div>
       </div>
+      <div id="distribution" :style="{'grid-template-columns': currentResultsDistribution}">
+        <div class="white"></div><div class="draw"></div><div class="black"></div>
+      </div>
       <opening-chessboard ref="chessboard"
         :fen="startPosition" 
         :orientation="playerColor" 
         :opponent="settings.opponent"
         :event="event" 
         @progress="refreshProgress"
+        @distribution="refreshDistribution"
         @opening="refreshOpeningName"
         @move="addMoveToList"
         @mistake="onWrongMove"
@@ -112,6 +116,11 @@ const openingChessboard = {
       const openingInfo = response.data;
       const sum = openingInfo.white + openingInfo.black + openingInfo.draws;
       this.$emit('progress', sum);
+      this.$emit('distribution', {
+        white: openingInfo.white / sum,
+        draw: openingInfo.draws / sum,
+        black: openingInfo.black / sum,
+      });
       openingInfo.played = sum;
       openingInfo.isLosing = sum > 0 && ((this.game.turn() === 'w' ? openingInfo.black : openingInfo.white) / sum) > 0.5;
       const moveNumber = this.getMoveNumber();
@@ -244,6 +253,7 @@ const app = new Vue({
     showStartPositionValidationError: false,
     currentOpeningName: '',
     currentPositionPlayed: 10000000,
+    currentResultsDistribution: null,
     progress: 0,
     event: null,
     moves: [],
@@ -253,13 +263,15 @@ const app = new Vue({
   computed: {
     moveNoList() {
       return [...new Set(this.moves.map(m => m.moveNo))];
-    }
+    },
   },
   methods: {
     newGame() {
       this.moves = [];
       this.lifes = 3;
+      this.currentOpeningName = '';
       this.currentPositionPlayed = 10000000;
+      this.currentResultsDistribution = null;
       this.progress = 0;
       this.emit('new');
     },
@@ -270,6 +282,9 @@ const app = new Vue({
       this.currentPositionPlayed = played;
       this.progress = (this.currentPositionPlayed < 10) ? 7 
         : (8 - Math.log(this.currentPositionPlayed) / Math.log(10));
+    },
+    refreshDistribution(distribution) {
+      this.currentResultsDistribution = `${distribution.white}fr ${distribution.draw}fr ${distribution.black}fr`;
     },
     refreshOpeningName(name) {
       this.currentOpeningName = name;
