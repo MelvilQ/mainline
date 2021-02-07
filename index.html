@@ -87,13 +87,9 @@ const openingChessboard = {
       }      
     },
     onMoveInput(from, to) {
-      this.move(from + to);
-      // TODO: Fehler bei Rochade abfangen
-    },
-    move(move) {
-      console.log(move);
-      this.game.move(move, {sloppy: true});
-      const playedMove = this.openingInfo.moves.find(m => m.uci === move);
+      const performedMove = this.game.move({from, to});
+      const san = performedMove.san;
+      const playedMove = this.openingInfo.moves.find(m => m.san === san);
       if (!playedMove || !playedMove.strength) {
         this.game.undo();
         this.board.set({fen: this.game.fen()});
@@ -118,27 +114,27 @@ const openingChessboard = {
     },
     async performOpponentMove() {
       const opponentMove = this.getMoveForOpponent('realistic');
-      this.game.move(opponentMove, {sloppy: true});
+      const movePerformed = this.game.move(opponentMove);
       this.board.set({fen: this.game.fen()});
       this.preparePlayerMove();
     },
     getMoveForOpponent(mode) {
-      const moves = this.openingInfo.moves.map(m => m.uci);
+      const moves = this.openingInfo.moves;
       if (mode === 'main') {
-        return moves[0];
+        return moves[0].san;
       } else if (mode === 'equal') {
-        return moves[Math.floor(Math.random() * moves.length)];
+        return moves[Math.floor(Math.random() * moves.length)].san;
       } else if (mode === 'realistic') {
         let countdown = Math.random();
         for (let i = 0; i < moves.length; ++i) {
           const move = moves[i];
           countdown -= move.probability;
           if (countdown <= 0) {
-            return move;
+            return move.san;
           }
         }
       }
-      return moves[0];
+      return moves[0].san;
     },
     undo() {
       this.game.undo();
