@@ -12,10 +12,25 @@
   <body>
 
     <div id="app">
-      <opening-chessboard 
-        :fen="position" 
+      <div id="settings" v-if="showSettings">
+        <div>
+          <div><strong>Optionen</strong></div><br>
+          <select v-model="settings.startPosition" @input="validateFen">
+            <option v-for="option in startPositionOptions" :value="option.value">{{option.label}}</option>
+          </select>
+          <div><input type="text" v-model="settings.startPosition" @blur="validateFen"></div>
+          <div class="validation-error" v-if="showStartPositionValidationError">Invalid FEN</div>
+          <div>
+            <input type="radio" id="white" v-model="settings.playerColor" value="white"><label for="white">White</label>
+            <input type="radio" id="black" v-model="settings.playerColor" value="black"><label for="black">Black</label>
+          </div>
+          <div style="text-align: right"><button class="ok" @click="applySettings">OK</button></div>
+        </div>
+      </div>
+      <opening-chessboard ref="chessboard"
+        :fen="startPosition" 
         :orientation="playerColor" 
-        :opponent="opponentConfig"
+        :opponent="settings.opponent"
         :event="event" 
         @progress="refreshProgress"
         @opening="refreshOpeningName"
@@ -26,8 +41,9 @@
       <div class="button-line">
         <button @click="emit('undo')">&lt;&lt;</button>
         <button @click="newGame">Neu</button>
+        <button @click="openSettings">Optionen</button>
       </div>
-      <div id="info">{{openingName}}</div>
+      <div id="info">{{currentOpeningName}}</div>
       <div>
         <div>
           <span>{{currentPositionPlayed}}</span>
@@ -133,7 +149,7 @@ const openingChessboard = {
       });
       await this.getOpeningInfo(this.opponent.database, this.opponent.options);
       if (!this.openingInfo?.moves?.length) {
-        console.log('Keine Züge mehr da...');
+        this.$emit('middlegame');
         return;
       }
       setTimeout(this.performOpponentMove, 500);
@@ -187,13 +203,30 @@ const app = new Vue({
     'opening-chessboard': openingChessboard,
   },
   data: {
-    position: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
-    openingName: '',
-    playerColor: 'black',
-    opponentConfig: {
-      database: 'master',
-      //config: {ratings: ['1600', '1800'], speeds: ['blitz', 'rapid', 'classical']}
+    settings: {
+      startPosition: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      playerColor: 'white',
+      evaluation: {
+        database: 'master',
+        config: null,
+      },
+      opponent: {
+        database: 'master',
+        //config: {ratings: ['1600', '1800'], speeds: ['blitz', 'rapid', 'classical']}
+      },
     },
+    showSettings: false,
+    startPositionOptions: [
+      {label: 'Default', value: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'},
+      {label: 'Najdorf', value: 'rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6'},
+      {label: 'Dragon', value: 'rnbqkb1r/pp2pp1p/3p1np1/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6'},
+      {label: 'Accelerated Dragon', value: 'r1bqkbnr/pp1ppp1p/2n3p1/8/3NP3/8/PPP2PPP/RNBQKB1R w KQkq - 0 5'},
+      {label: 'Hyperaccelerated Dragon', value: 'rnbqkbnr/pp1ppp1p/6p1/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3'},
+    ],
+    startPosition: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+    playerColor: 'white',
+    showStartPositionValidationError: false,
+    currentOpeningName: '',
     currentPositionPlayed: 10000000,
     progress: 0,
     event: null,
@@ -217,7 +250,7 @@ const app = new Vue({
         : (8 - Math.log(this.currentPositionPlayed) / Math.log(10));
     },
     refreshOpeningName(name) {
-      this.openingName = name;
+      this.currentOpeningName = name;
     },
     addMoveToList(move) {
       this.moves.push(move);
@@ -238,6 +271,29 @@ const app = new Vue({
     },
     formatProbability(p) {
       return `${Math.round(100*p)}%`;
+    },
+    openSettings() {
+      this.showSettings = true;
+    },
+    validateFen() {
+      this.showStartPositionValidationError = !this.$refs.chessboard.game.validate_fen(this.settings.startPosition).valid;
+    },
+    applySettings() {
+      this.showSettings = false;
+      let newGameNeeded = false;
+      if (this.showStartPositionValidationError) {
+        this.settings.startPosition = this.startPosition;
+      } else if (this.settings.startPosition !== this.startPosition) {
+        this.startPosition = this.settings.startPosition;
+        newGameNeeded = true;
+      }
+      if (this.settings.playerColor !== this.playerColor) {
+        this.playerColor = this.settings.playerColor;
+        newGameNeeded = true;
+      }
+      if (newGameNeeded) {
+        this.newGame();
+      }
     }
   },
   created() {
