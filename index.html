@@ -12,7 +12,10 @@
   <body>
 
     <div id="app">
-      <opening-chessboard :fen="position" :orientation="playerColor" 
+      <opening-chessboard 
+        :fen="position" 
+        :orientation="playerColor" 
+        :opponent="opponentConfig"
         :event="event" 
         @progress="refreshProgress"
         @opening="refreshOpeningName"
@@ -40,7 +43,7 @@
     <script>
 const openingChessboard = {
   extends: VueChessboard.chessboard,
-  props: ['event'],
+  props: ['event', 'opponent'],
   watch: {
     event(event) {
       if (event.type === 'undo') {
@@ -58,8 +61,8 @@ const openingChessboard = {
     },
     async preparePlayerMove() {
       await this.getOpeningInfo();
-      if (this.openingInfo.played <= 10) {
-        this.board.set({turnColor: null});
+      if (this.openingInfo.played < 10) {
+        this.board.set({turnColor: null, movable: false});
         this.$emit('middlegame');
         return;
       }
@@ -119,7 +122,7 @@ const openingChessboard = {
       this.board.set({
         turnColor: this.toColor(),
       })
-      await this.getOpeningInfo('lichess', {ratings: ['1600', '1800'], speeds: ['blitz', 'rapid', 'classical']});
+      await this.getOpeningInfo(this.opponent.database, this.opponent.options);
       if (!this.openingInfo?.moves?.length) {
         console.log('Keine Züge mehr da...');
         return;
@@ -174,6 +177,10 @@ const app = new Vue({
     position: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
     openingName: '',
     playerColor: 'black',
+    opponentConfig: {
+      database: 'master',
+      //config: {ratings: ['1600', '1800'], speeds: ['blitz', 'rapid', 'classical']}
+    },
     currentPositionPlayed: 10000000,
     progress: 0,
     event: null,
@@ -186,7 +193,7 @@ const app = new Vue({
     },
     refreshProgress(played) {
       this.currentPositionPlayed = played;
-      this.progress = (this.currentPositionPlayed <= 10) ? 7 
+      this.progress = (this.currentPositionPlayed < 10) ? 7 
         : (8 - Math.log(this.currentPositionPlayed) / Math.log(10));
     },
     refreshOpeningName(name) {
