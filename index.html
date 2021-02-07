@@ -23,7 +23,11 @@
       </div>
       <div id="info">{{openingName}}</div>
       <div>
-        <div v-for="move in moves">{{move.text}} {{move.strength}} {{move.probability}}</div>
+        <div v-for="move in moves">
+          <span>{{move.text}}</span>
+          <span>{{formatStrength(move.strength)}}</span>
+          <span>{{formatProbability(move.probability)}}</span>
+        </div>
       </div>
     </div>
 
@@ -176,6 +180,17 @@ const app = new Vue({
     },
     onWrongMove(move) {
       this.lifes -= 1;
+    },
+    formatStrength(strength){
+      switch(strength){
+        case 3: return 'Top';
+        case 2: return 'Good';
+        case 1: return 'Ok';
+        case 0: return 'Bad';
+      }
+    },
+    formatProbability(p) {
+      return `${Math.round(100*p)}%`;
     }
   },
   created() {
