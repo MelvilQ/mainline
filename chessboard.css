@@ -61,6 +61,12 @@ body {
   will-change: transform;
   background-color: rgba(155, 199, 0, 0.41);
 }
+.last-move-red .cg-board square.last-move {
+  background-color: rgba(231, 0, 0, 0.41);
+}
+.last-move-yellow .cg-board square.last-move {
+  background-color: rgba(231, 231, 0, 0.41)
+}
 .cg-board square.selected {
   background-color: rgba(20, 85, 30, 0.5);
 }

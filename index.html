@@ -25,6 +25,7 @@
       </opening-chessboard>
       <div class="button-line">
         <button @click="emit('undo')">&lt;&lt;</button>
+        <button @click="newGame">Neu</button>
       </div>
       <div id="info">{{openingName}}</div>
       <div>
@@ -48,10 +49,16 @@ const openingChessboard = {
     event(event) {
       if (event.type === 'undo') {
         this.undo();
+      } else if (event.type === 'new') {
+        this.restartPosition();
       }
     }
   },
   methods: {
+    restartPosition() {
+      this.loadPosition();
+      this.startPosition();
+    },
     startPosition() {
       if (this.orientation.startsWith(this.game.turn())) {
         this.preparePlayerMove();
@@ -108,12 +115,13 @@ const openingChessboard = {
       const san = performedMove.san;
       const playedMove = this.openingInfo.moves.find(m => m.san === san);
       if (!playedMove || !playedMove.strength) {
+        this.setLastMoveHighlightColor('red');
         this.game.undo();
         this.board.set({fen: this.game.fen()});
         this.$emit('mistake', playedMove);
         this.preparePlayerMove();
       } else {
-        console.log(`${playedMove.text}: ${playedMove.strength} (${Math.round(playedMove.probability*100)}%)`);
+        this.setLastMoveHighlightColor((playedMove.strength < 2) ? 'yellow' : 'default');
         this.$emit('move', playedMove);
         this.prepareOpponentMove();
       }
@@ -121,7 +129,8 @@ const openingChessboard = {
     async prepareOpponentMove() {
       this.board.set({
         turnColor: this.toColor(),
-      })
+        premovable: {enabled: false}
+      });
       await this.getOpeningInfo(this.opponent.database, this.opponent.options);
       if (!this.openingInfo?.moves?.length) {
         console.log('Keine Züge mehr da...');
@@ -132,7 +141,8 @@ const openingChessboard = {
     async performOpponentMove() {
       const opponentMove = this.getMoveForOpponent('realistic');
       const movePerformed = this.game.move(opponentMove);
-      this.board.set({fen: this.game.fen()});
+      this.setLastMoveHighlightColor((opponentMove.strength < 2) ? 'yellow' : 'default');
+      this.board.move(movePerformed.from, movePerformed.to);
       this.preparePlayerMove();
     },
     getMoveForOpponent(mode) {
@@ -158,7 +168,10 @@ const openingChessboard = {
       this.game.undo();
       this.board.set({fen: this.game.fen()});
       this.preparePlayerMove();
-    }
+    },
+    setLastMoveHighlightColor(color) {
+      document.getElementById('app').className = color === 'default' ? '' : 'last-move-' + color;
+    },
   },
   created() {
     this.openingInfo = null;
@@ -188,6 +201,13 @@ const app = new Vue({
     lifes: 3,
   },
   methods: {
+    newGame() {
+      this.moves = [];
+      this.lifes = 3;
+      this.currentPositionPlayed = 10000000;
+      this.progress = 0;
+      this.emit('new');
+    },
     emit(event) {
       this.event = {type: event};
     },
