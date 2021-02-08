@@ -27,8 +27,10 @@
           <div style="text-align: right"><button class="ok" @click="applySettings">OK</button></div>
         </div>
       </div>
-      <div id="distribution" :style="{'grid-template-columns': currentResultsDistribution}">
-        <div class="white"></div><div class="draw"></div><div class="black"></div>
+      <div id="distribution" v-if="currentResultsDistribution">
+        <div class="white" :style="{width: 100*currentResultsDistribution.white + '%'}"></div>
+        <div class="draw" :style="{width: 100*currentResultsDistribution.draw + '%'}"></div>
+        <div class="black" :style="{width: 100*currentResultsDistribution.black + '%'}"></div>
       </div>
       <opening-chessboard ref="chessboard"
         :fen="startPosition" 
@@ -284,7 +286,7 @@ const app = new Vue({
         : (8 - Math.log(this.currentPositionPlayed) / Math.log(10));
     },
     refreshDistribution(distribution) {
-      this.currentResultsDistribution = `${distribution.white}fr ${distribution.draw}fr ${distribution.black}fr`;
+      this.currentResultsDistribution = distribution;
     },
     refreshOpeningName(name) {
       this.currentOpeningName = name;
