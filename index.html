@@ -299,12 +299,15 @@ const app = new Vue({
       this.wrongMove = move;
       this.lifes -= 1;
       if (this.lifes <= 0) {
-        alert('You lost all your lifes. Start again!');
-        this.newGame();
+        setTimeout(this.gameOver, 500);
       }
     },
+    gameOver() {
+      alert('You lost all your lifes. Start again!');
+      this.newGame();
+    },
     onMiddlegameReached() {
-      setTimeout(() => alert('Congrats, you made it into the middlegame!'), 1000);
+      setTimeout(() => alert('Congrats, you made it into the middlegame!'), 500);
     },
     formatStrength(strength){
       switch(strength){
