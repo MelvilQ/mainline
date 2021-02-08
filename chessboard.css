@@ -10,24 +10,29 @@ body {
   flex-direction: column;
   align-items: center;
 }
-#distribution {
+#distribution, #evaluation {
   width: 100%;
   display: flex;
   height: 16px;
-  margin-bottom: 6px;
 }
-#distribution > div {
+#distribution > div, #evaluation > div {
   transition: width 0.5s ease-out;
   will-change: width;
 }
-#distribution .white {
+#distribution .white, #evaluation .white {
   background: white;
 }
 #distribution .draw {
   background:rgb(45, 79, 153)
 }
-#distribution .black {
+#distribution .black, #evaluation .black {
   background: black;
+}
+#distribution {
+  margin-bottom: 1px;
+}
+#evaluation {
+  margin-bottom: 6px;
 }
 #info {
   margin-top: 12px;

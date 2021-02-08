@@ -27,10 +27,14 @@
           <div style="text-align: right"><button class="ok" @click="applySettings">OK</button></div>
         </div>
       </div>
-      <div id="distribution" v-if="currentResultsDistribution">
-        <div class="white" :style="{width: 100*currentResultsDistribution.white + '%'}"></div>
-        <div class="draw" :style="{width: 100*currentResultsDistribution.draw + '%'}"></div>
-        <div class="black" :style="{width: 100*currentResultsDistribution.black + '%'}"></div>
+      <div id="distribution">
+        <div class="white" v-if="currentResultsDistribution" :style="{width: 100*currentResultsDistribution.white + '%'}"></div>
+        <div class="draw" v-if="currentResultsDistribution" :style="{width: 100*currentResultsDistribution.draw + '%'}"></div>
+        <div class="black" v-if="currentResultsDistribution" :style="{width: 100*currentResultsDistribution.black + '%'}"></div>
+      </div>
+      <div id="evaluation">
+        <div class="white" v-if="currentEvaluation !== null" :style="{width: (0.166*currentEvaluation + 50) + '%'}"></div>
+        <div class="black" v-if="currentEvaluation !== null" :style="{width: (-0.166*currentEvaluation + 50) + '%'}"></div>
       </div>
       <opening-chessboard ref="chessboard"
         :fen="startPosition" 
@@ -39,6 +43,7 @@
         :event="event" 
         @progress="refreshProgress"
         @distribution="refreshDistribution"
+        @evaluation="refreshEvaluation"
         @opening="refreshOpeningName"
         @move="addMoveToList"
         @mistake="onWrongMove"
@@ -95,6 +100,7 @@ const openingChessboard = {
     },
     async preparePlayerMove() {
       await this.getOpeningInfo();
+      await this.getEvaluation();
       if (this.openingInfo.played < 10) {
         this.board.set({turnColor: null, movable: false});
         this.$emit('middlegame');
@@ -113,8 +119,9 @@ const openingChessboard = {
       if (database === 'lichess') {
         queryOptions.variant = 'standard';
       }
+      const fen = this.game.fen();
       const response = await axios.get('https://explorer.lichess.ovh/' + database, 
-        {params: {fen: this.game.fen(), moves: 20, ...queryOptions}});
+        {params: {fen, moves: 20, ...queryOptions}});
       const openingInfo = response.data;
       const sum = openingInfo.white + openingInfo.black + openingInfo.draws;
       this.$emit('progress', sum);
@@ -147,6 +154,27 @@ const openingChessboard = {
         this.$emit('opening', `${categorization.eco} - ${categorization.name}`);
       }      
     },
+    async getEvaluation() {
+      let evaluation = null;
+      try {
+        const fen = this.fixFenForLichessCloudEvalApi(this.game.fen());
+        const response = await axios.get('https://lichess.org/api/cloud-eval', {params: {fen}});
+        evaluation = response.data.pvs[0].cp;
+      } catch(e) {
+        console.warn('error getting evaluation for ' + this.game.fen());
+      }
+      this.$emit('evaluation', evaluation);
+    },
+    fixFenForLichessCloudEvalApi(fen) {
+      const fenParts = fen.split(' ');
+      const enPassantPart = fenParts[3];
+      const canEnPassant = this.game.moves({verbose: true}).some(m => m.flags.includes('e'));
+      if (enPassantPart === '-' || canEnPassant) {
+        return fen;
+      }
+      fenParts[3] = '-';
+      return fenParts.join(' ');
+    },
     onMoveInput(from, to) {
       const performedMove = this.game.move({from, to});
       const san = performedMove.san;
@@ -169,6 +197,7 @@ const openingChessboard = {
         premovable: {enabled: false}
       });
       await this.getOpeningInfo(this.opponent.database, this.opponent.options);
+      await this.getEvaluation();
       if (!this.openingInfo?.moves?.length) {
         this.$emit('middlegame');
         return;
@@ -249,6 +278,7 @@ const app = new Vue({
       {label: 'Accelerated Dragon', value: 'r1bqkbnr/pp1ppp1p/2n3p1/8/3NP3/8/PPP2PPP/RNBQKB1R w KQkq - 0 5'},
       {label: 'Hyperaccelerated Dragon', value: 'rnbqkbnr/pp1ppp1p/6p1/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3'},
       {label: 'Rossolimo Attack', value: 'r1bqkbnr/pp1ppppp/2n5/1Bp5/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3'},
+      {label: 'Russian', value: 'rnbqkb1r/pppp1ppp/5n2/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3'},
     ],
     startPosition: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
     playerColor: 'white',
@@ -256,6 +286,7 @@ const app = new Vue({
     currentOpeningName: '',
     currentPositionPlayed: 10000000,
     currentResultsDistribution: null,
+    currentEvaluation: null,
     progress: 0,
     event: null,
     moves: [],
@@ -287,6 +318,9 @@ const app = new Vue({
     },
     refreshDistribution(distribution) {
       this.currentResultsDistribution = distribution;
+    },
+    refreshEvaluation(evaluation) {
+      this.currentEvaluation = Math.min(300, Math.max(-300, evaluation));
     },
     refreshOpeningName(name) {
       this.currentOpeningName = name;
