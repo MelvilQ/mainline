@@ -141,6 +141,12 @@ body {
 .last-move-yellow .cg-board square.last-move {
   background-color: rgba(231, 231, 0, 0.41)
 }
+.last-move-lightgreen .cg-board square.last-move {
+  background-color: rgba(190, 231, 0, 0.41)
+}
+.last-move-green .cg-board square.last-move {
+  background-color: rgba(0, 231, 0, 0.41)
+}
 .cg-board square.selected {
   background-color: rgba(20, 85, 30, 0.5);
 }
