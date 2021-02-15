@@ -189,8 +189,8 @@ const openingChessboard = {
       const performedMove = this.game.move({from, to});
       const san = performedMove.san;
       const playedMove = this.openingInfo.moves.find(m => m.san === san)
-        || {san, text: this.getTextForSan(san), alternatives: this.openingInfo.moves};
-      const strength = !playedMove ? 0 : playedMove.strength;
+        || {san, text: this.getTextForSan(san), alternatives: this.openingInfo.moves, strength: 0};
+      const strength = playedMove.strength;
       this.setLastMoveHighlightColor(strength);
       if (strength === 0) {
         this.game.undo();
@@ -304,6 +304,7 @@ const app = new Vue({
       {label: 'Hyperaccelerated Dragon', value: 'rnbqkbnr/pp1ppp1p/6p1/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3'},
       {label: 'Rossolimo Attack', value: 'r1bqkbnr/pp1ppppp/2n5/1Bp5/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3'},
       {label: 'Kalashnikov', value: 'r1bqkbnr/pp1p1ppp/2n5/4p3/3NP3/8/PPP2PPP/RNBQKB1R w KQkq - 0 5'},
+      {label: 'Morra-Gambit', value: 'rnbqkbnr/pp1ppppp/8/2p5/3PP3/8/PPP2PPP/RNBQKBNR b KQkq - 0 2'},
       {label: 'Russian', value: 'rnbqkb1r/pppp1ppp/5n2/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3'},
       {label: 'Queen\'s Gambit Accepted with e4', value: 'rnbqkbnr/ppp1pppp/8/8/2pPP3/8/PP3PPP/RNBQKBNR b KQkq - 0 3'},
       {label: 'Scotch Game', value: 'r1bqkbnr/pppp1ppp/2n5/4p3/3PP3/5N2/PPP2PPP/RNBQKB1R b KQkq - 0 3'},
