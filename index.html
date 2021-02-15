@@ -194,7 +194,7 @@ const openingChessboard = {
       if (strength === 0) {
         this.game.undo();
         this.board.set({fen: this.game.fen()});
-        this.$emit('mistake', playedMove);
+        this.$emit('mistake', playedMove || {san, alternatives: this.openingInfo.moves});
         this.preparePlayerMove();
       } else {
         this.setLastMoveHighlightColor(strength);
@@ -303,6 +303,7 @@ const app = new Vue({
       {label: 'Queen\'s Gambit Accepted with e4', value: 'rnbqkbnr/ppp1pppp/8/8/2pPP3/8/PP3PPP/RNBQKBNR b KQkq - 0 3'},
       {label: 'Scotch Game', value: 'r1bqkbnr/pppp1ppp/2n5/4p3/3PP3/5N2/PPP2PPP/RNBQKB1R b KQkq - 0 3'},
       {label: 'Italian Game', value: 'r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3'},
+      {label: 'Philidor Defense', value: 'rnbqkbnr/ppp2ppp/3p4/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3'},
     ],
     startPosition: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
     playerColor: 'white',
@@ -342,7 +343,6 @@ const app = new Vue({
       this.currentResultsDistribution = distribution;
     },
     refreshEvaluation(evaluation) {
-      console.log(evaluation)
       this.currentEvaluation = evaluation === null ? null : Math.min(300, Math.max(-300, evaluation));
     },
     refreshOpeningName(name) {
@@ -360,7 +360,8 @@ const app = new Vue({
       }
     },
     gameOver() {
-      alert('You lost all your lifes. Start again!');
+      const bestCandidate = this.wrongMove.alternatives.find(m => m.strength > 0)?.san;
+      alert('You lost all your lifes. Start again! Best move in this position is ' + bestCandidate + '.');
       this.newGame();
     },
     onMiddlegameReached() {
