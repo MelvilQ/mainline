@@ -145,7 +145,7 @@ const openingChessboard = {
       const moveColor = this.game.turn();
       openingInfo.moves.forEach(m => m.moveColor = moveColor);
       openingInfo.moves.forEach(m => m.isPlayerMove = this.orientation.startsWith(moveColor));
-      openingInfo.moves.forEach(m => m.text = m.san.replace('Q','D').replace('R','T').replace('B','L').replace('N','S'));
+      openingInfo.moves.forEach(m => m.text = this.getTextForSan(m.san));
       openingInfo.moves.forEach(m => m.played = m.white + m.black + m.draws);
       openingInfo.moves.forEach(m => m.probability = (sum > 0) ? m.played / sum : 0);
       openingInfo.moves.forEach(m => m.isLosing = 
@@ -188,13 +188,14 @@ const openingChessboard = {
     onMoveInput(from, to) {
       const performedMove = this.game.move({from, to});
       const san = performedMove.san;
-      const playedMove = this.openingInfo.moves.find(m => m.san === san);
+      const playedMove = this.openingInfo.moves.find(m => m.san === san)
+        || {san, text: this.getTextForSan(san), alternatives: this.openingInfo.moves};
       const strength = !playedMove ? 0 : playedMove.strength;
       this.setLastMoveHighlightColor(strength);
       if (strength === 0) {
         this.game.undo();
         this.board.set({fen: this.game.fen()});
-        this.$emit('mistake', playedMove || {san, alternatives: this.openingInfo.moves});
+        this.$emit('mistake', playedMove);
         this.preparePlayerMove();
       } else {
         this.setLastMoveHighlightColor(strength);
@@ -262,7 +263,10 @@ const openingChessboard = {
     },
     getMoveNumber() {
       return parseInt(this.game.fen().split(' ')[5]);
-    }
+    },
+    getTextForSan(san) {
+      return san.replace('Q','D').replace('R','T').replace('B','L').replace('N','S');
+    },
   },
   created() {
     this.openingInfo = null;
@@ -360,9 +364,8 @@ const app = new Vue({
       }
     },
     gameOver() {
-      const bestCandidate = this.wrongMove.alternatives.find(m => m.strength > 0)?.san;
+      const bestCandidate = this.wrongMove.alternatives.find(m => m.strength > 0)?.text;
       alert('You lost all your lifes. Start again! Best move in this position is ' + bestCandidate + '.');
-      this.newGame();
     },
     onMiddlegameReached() {
       setTimeout(() => alert('Congrats, you made it into the middlegame!'), 500);
