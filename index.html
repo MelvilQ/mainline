@@ -51,9 +51,10 @@
         @middlegame="onMiddlegameReached">
       </opening-chessboard>
       <div class="button-line">
-        <button @click="emit('undo')">&lt;&lt;</button>
+        <button @click="undo">&lt;&lt;</button>
         <button @click="newGame">New</button>
         <button @click="openSettings">Settings</button>
+        <button @click="openOnLichess">Analyze</button>
       </div>
       <div id="info">{{currentOpeningName}}</div>
       <div>
@@ -83,7 +84,9 @@ const openingChessboard = {
   props: ['event', 'opponent'],
   watch: {
     event(event) {
-      if (event.type === 'undo') {
+      if (event.type === 'lichess') {
+        window.open('https://lichess.org/analysis?fen=' + this.game.fen(), '_blank');
+      } else if (event.type === 'undo') {
         this.undo();
       } else if (event.type === 'new') {
         this.restartPosition();
@@ -330,6 +333,12 @@ const app = new Vue({
     },
   },
   methods: {
+    openOnLichess() {
+      this.emit('lichess');
+    },
+    undo() {
+      this.emit('undo');
+    },
     newGame() {
       this.moves = [];
       this.lifes = 3;
@@ -410,9 +419,6 @@ const app = new Vue({
         this.newGame();
       }
     }
-  },
-  created() {
-    
   }
 });
 
