@@ -24,6 +24,15 @@
             <input type="radio" id="white" v-model="settings.playerColor" value="white"><label for="white">White</label>
             <input type="radio" id="black" v-model="settings.playerColor" value="black"><label for="black">Black</label>
           </div>
+          <div>
+            <input type="radio" id="master" v-model="settings.database" value="master"><label for="master">GM</label>
+            <input type="radio" id="lichess" v-model="settings.database" value="lichess"><label for="lichess">Lichess > 1800</label>
+          </div>
+          <div>
+            <input type="radio" id="realistic" v-model="settings.opponent" value="realistic"><label for="realistic">Realistic</label>
+            <input type="radio" id="main" v-model="settings.opponent" value="main"><label for="main">Main Line</label>
+            <input type="radio" id="equal" v-model="settings.opponent" value="equal"><label for="equal">Random</label>
+          </div>
           <div style="text-align: right"><button class="ok" @click="applySettings">OK</button></div>
         </div>
       </div>
@@ -39,6 +48,7 @@
       <opening-chessboard ref="chessboard"
         :fen="startPosition" 
         :orientation="playerColor" 
+        :database="settings.database"
         :opponent="settings.opponent"
         :event="event" 
         @progress="refreshProgress"
@@ -81,7 +91,7 @@
     <script>
 const openingChessboard = {
   extends: VueChessboard.chessboard,
-  props: ['event', 'opponent'],
+  props: ['event', 'database', 'opponent'],
   watch: {
     event(event) {
       if (event.type === 'lichess') {
@@ -126,12 +136,15 @@ const openingChessboard = {
         }
       });
     },
-    async getOpeningInfo(database = 'master', queryOptions = {}) {
-      if (database === 'lichess') {
+    async getOpeningInfo() {
+      const queryOptions = {};
+      if (this.database === 'lichess') {
         queryOptions.variant = 'standard';
+        queryOptions.ratings = ['1800', '2000', '2200', '2500'];
+        queryOptions.speeds = ['blitz', 'rapid', 'classical'];
       }
       const fen = this.game.fen();
-      const response = await axios.get('https://explorer.lichess.ovh/' + database, 
+      const response = await axios.get('https://explorer.lichess.ovh/' + this.database, 
         {params: {fen, moves: 20, ...queryOptions}});
       const openingInfo = response.data;
       const sum = openingInfo.white + openingInfo.black + openingInfo.draws;
@@ -211,7 +224,7 @@ const openingChessboard = {
         turnColor: this.toColor(),
         premovable: {enabled: false}
       });
-      await this.getOpeningInfo(this.opponent.database, this.opponent.options);
+      await this.getOpeningInfo();
       await this.getEvaluation();
       if (!this.openingInfo?.moves?.length) {
         this.$emit('middlegame');
@@ -220,7 +233,7 @@ const openingChessboard = {
       setTimeout(this.performOpponentMove, 500);
     },
     async performOpponentMove() {
-      const opponentMove = this.getMoveForOpponent('realistic');
+      const opponentMove = this.getMoveForOpponent(this.opponent);
       const movePerformed = this.game.move(opponentMove.san);
       this.$emit('move', opponentMove);
       this.setLastMoveHighlightColor(opponentMove.strength);
@@ -288,14 +301,8 @@ const app = new Vue({
     settings: {
       startPosition: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       playerColor: 'white',
-      evaluation: {
-        database: 'master',
-        config: null,
-      },
-      opponent: {
-        database: 'master',
-        //config: {ratings: ['1600', '1800'], speeds: ['blitz', 'rapid', 'classical']}
-      },
+      database: 'master',
+      opponent: 'realistic',
     },
     showSettings: false,
     startPositionOptions: [
@@ -374,6 +381,7 @@ const app = new Vue({
       this.wrongMove = move;
       this.lifes -= 1;
       if (this.lifes <= 0) {
+        this.lifes = 0;
         setTimeout(this.gameOver, 500);
       }
     },
