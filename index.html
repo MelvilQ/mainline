@@ -155,7 +155,8 @@ const openingChessboard = {
         black: openingInfo.black / sum,
       });
       openingInfo.played = sum;
-      openingInfo.isLosing = sum > 0 && ((this.game.turn() === 'w' ? openingInfo.black : openingInfo.white) / sum) > 0.5;
+      const losingThreshold = this.database === 'master' ? 0.5 : 0.7;
+      openingInfo.isLosing = sum > 0 && ((this.game.turn() === 'w' ? openingInfo.black : openingInfo.white) / sum) > losingThreshold;
       const moveNumber = this.getMoveNumber();
       openingInfo.moves.forEach(m => m.moveNo = moveNumber);
       const moveColor = this.game.turn();
@@ -165,7 +166,7 @@ const openingChessboard = {
       openingInfo.moves.forEach(m => m.played = m.white + m.black + m.draws);
       openingInfo.moves.forEach(m => m.probability = (sum > 0) ? m.played / sum : 0);
       openingInfo.moves.forEach(m => m.isLosing = 
-        m.played > 0 && ((moveColor === 'w' ? m.black : m.white) / m.played) > 0.5);
+        m.played > 0 && ((moveColor === 'w' ? m.black : m.white) / m.played) > losingThreshold);
       openingInfo.moves.forEach((m, i) => m.strength = 
         ((m.isLosing || m.probability < 0.03) ? 0 // bad
           : (i === 0) ? 4                         // top
