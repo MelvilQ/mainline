@@ -88,6 +88,9 @@ body {
   margin-left: auto;
   margin-top: 8px;
 }
+.button-line button {
+  margin: 0 3px;
+}
 .cg-board-wrap {
   width: 80vmin;
   height: 80vmin;
