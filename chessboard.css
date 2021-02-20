@@ -73,7 +73,7 @@ body {
 }
 #settings input[type="radio"] + label {
   margin-left: 4px;
-  margin-right: 16px;
+  margin-right: 8px;
 }
 #settings input[type="text"], #settings select {
   width: 100%;

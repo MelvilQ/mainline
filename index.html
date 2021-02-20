@@ -26,7 +26,9 @@
           </div>
           <div>
             <input type="radio" id="master" v-model="settings.database" value="master"><label for="master">GM</label>
-            <input type="radio" id="lichess" v-model="settings.database" value="lichess"><label for="lichess">Lichess > 1800</label>
+            <input type="radio" id="lichess-2000" v-model="settings.database" value="lichess-2000"><label for="lichess-2000">> 2000</label>
+            <input type="radio" id="lichess-1800" v-model="settings.database" value="lichess-1800"><label for="lichess-1800">> 1800</label>
+            <input type="radio" id="lichess-1600" v-model="settings.database" value="lichess-1600"><label for="lichess-1600">> 1600</label>
           </div>
           <div>
             <input type="radio" id="realistic" v-model="settings.opponent" value="realistic"><label for="realistic">Realistic</label>
@@ -137,14 +139,15 @@ const openingChessboard = {
       });
     },
     async getOpeningInfo() {
+      const [database, minElo] = this.database.split('-');
       const queryOptions = {};
-      if (this.database === 'lichess') {
+      if (database === 'lichess') {
         queryOptions.variant = 'standard';
-        queryOptions.ratings = ['1800', '2000', '2200', '2500'];
+        queryOptions.ratings = ['1600', '1800', '2000', '2200', '2500'].filter(elo => elo >= minElo);
         queryOptions.speeds = ['blitz', 'rapid', 'classical'];
       }
       const fen = this.game.fen();
-      const response = await axios.get('https://explorer.lichess.ovh/' + this.database, 
+      const response = await axios.get('https://explorer.lichess.ovh/' + database, 
         {params: {fen, moves: 20, ...queryOptions}});
       const openingInfo = response.data;
       const sum = openingInfo.white + openingInfo.black + openingInfo.draws;
