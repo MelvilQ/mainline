@@ -80,7 +80,7 @@
             :style="{'grid-row': 100-no}">{{no}}.</div>
           <div v-if="!!moves[0] && moves[0].moveColor === 'b'" class="move-placeholder"
             :style="{'grid-row': 100-moves[0].moveNo}">...</div>
-          <div v-for="move in moves" @click="showAlternatives(move.alternatives)"
+          <div v-for="move in moves" class="move" @click="showAlternatives(move.alternatives)"
             :style="{'grid-column': move.moveColor === 'w' ? 2 : 3, 'grid-row': 100-move.moveNo}">
             <span>{{move.text}}</span>
             <span v-if="move.isPlayerMove">{{formatStrength(move.strength)}}</span>
@@ -404,11 +404,11 @@ const app = new Vue({
     },
     formatStrength(strength) {
       switch(strength) {
-        case 4: return 'Top';
-        case 3: return 'Good';
-        case 2: return 'Ok';
-        case 1: return 'Playable';
-        case 0: return 'Bad';
+        case 4: return 'TOP';
+        case 3: return 'GOOD';
+        case 2: return 'OK';
+        case 1: return 'PLAYABLE';
+        case 0: return 'BAD';
       }
     },
     formatPercentage(p) {

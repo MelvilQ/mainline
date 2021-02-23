@@ -44,6 +44,10 @@ body {
   grid-template-columns: 20px max-content max-content;
   column-gap: 12px;
 }
+#moves .move {
+  cursor: pointer;
+  user-select: none;
+}
 #moves .move-no {
   grid-column: 1;
 }
