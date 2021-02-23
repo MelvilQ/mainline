@@ -80,11 +80,11 @@
             :style="{'grid-row': 100-no}">{{no}}.</div>
           <div v-if="!!moves[0] && moves[0].moveColor === 'b'" class="move-placeholder"
             :style="{'grid-row': 100-moves[0].moveNo}">...</div>
-          <div v-for="move in moves" 
+          <div v-for="move in moves" @click="showAlternatives(move.alternatives)"
             :style="{'grid-column': move.moveColor === 'w' ? 2 : 3, 'grid-row': 100-move.moveNo}">
             <span>{{move.text}}</span>
             <span v-if="move.isPlayerMove">{{formatStrength(move.strength)}}</span>
-            <span>{{formatProbability(move.probability)}}</span>
+            <span>{{formatPercentage(move.probability)}}</span>
           </div>
         </div>
       </div>
@@ -411,8 +411,14 @@ const app = new Vue({
         case 0: return 'Bad';
       }
     },
-    formatProbability(p) {
+    formatPercentage(p) {
       return `${Math.round(100*p)}%`;
+    },
+    showAlternatives(moves) {
+      const msg = moves
+        .filter(m => m.probability >= 0.02)
+        .map(m => `${m.text}    ${this.formatStrength(m.strength)}    ${this.formatPercentage(m.probability)} ${m.losing ? '(loses often)' : ''}`).join('\n');
+      alert(msg);
     },
     openSettings() {
       this.showSettings = true;
