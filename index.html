@@ -249,7 +249,8 @@ const openingChessboard = {
       if (mode === 'main') {
         return moves[0];
       } else if (mode === 'equal') {
-        return moves[Math.floor(Math.random() * moves.length)];
+        const playableMoves = moves.filter(m => m.probability >= 0.02);
+        return playableMoves[Math.floor(Math.random() * playableMoves.length)];
       } else if (mode === 'realistic') {
         let countdown = Math.random();
         for (let i = 0; i < moves.length; ++i) {
