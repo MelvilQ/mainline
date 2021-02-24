@@ -418,7 +418,7 @@ const app = new Vue({
     showAlternatives(moves) {
       const msg = moves
         .filter(m => m.probability >= 0.02)
-        .map(m => `${m.text}    ${this.formatStrength(m.strength)}    ${this.formatPercentage(m.probability)} ${m.losing ? '(loses often)' : ''}`).join('\n');
+        .map(m => `${m.text}    ${this.formatStrength(m.strength)}    ${this.formatPercentage(m.probability)} ${m.isLosing ? '(loses often)' : ''}`).join('\n');
       alert(msg);
     },
     openSettings() {
