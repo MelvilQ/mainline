@@ -120,7 +120,7 @@ const openingChessboard = {
     async preparePlayerMove() {
       await this.getOpeningInfo();
       await this.getEvaluation();
-      if (this.openingInfo.moves.every(m => m.strength === 0)) {
+      if (this.openingInfo.moves.every(m => m.strength === 0) && this.openingInfo.played >= 3) {
         this.board.set({turnColor: null, movable: false});
         this.$emit('hopeless');
         return;
